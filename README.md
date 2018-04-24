@@ -10,7 +10,7 @@ There are three executions phases:
 ./spark-submit --class "Evaluation" ml_2.11-0.1.jar  result_predicts.parquet/
 
 
-To compile xgboost (latest version 0.72) , please follow these steps:
+To compile xgboost (latest version 0.72) and publish to local maven directory, please follow these steps:
 
 
 source: 
@@ -35,6 +35,7 @@ cd xgboost/jvm-packages
 
 mvn -DskipTests=true -Dspark.version=2.2.1 package
 
+mvn -DskipTests=true install
 
 
 
