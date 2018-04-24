@@ -29,7 +29,6 @@ object Preprocess {
     val spark = SparkSession
       .builder()
       .appName("Preprocess")
-      .master("local")
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -42,10 +41,23 @@ object Preprocess {
 
     df.printSchema
 
+    /**
+      * -----------------------------------------------------------------------------------
+      * | ip | app | device | os | channel | click_time | attributed_time | is_attributed |
+      * -----------------------------------------------------------------------------------
+      */
     val df_lessfeatures = df//.withColumn("minute", minute(col("click_time")))
       .withColumn("hour",hour(col("click_time")))
       .withColumn("day",dayofmonth(col("click_time")))
-      .drop("click_time","attributed_time").withColumnRenamed("is_attributed", "label")
+      .drop("click_time","attributed_time")
+      .withColumnRenamed("is_attributed", "label")
+
+    /**
+      * -----------------------------------------------------------------------------------
+      * | ip | app | device | os | channel | hour | day | label (is_attributed) |
+      * -----------------------------------------------------------------------------------
+      */
+
 
     df_lessfeatures.show()
 
@@ -120,8 +132,11 @@ object Preprocess {
     val preprocess_pipeline = new Pipeline()
       .setStages(stages.toArray)
 
-    val preprocess_model = preprocess_pipeline.fit(df_train)
+    val preprocess_model: PipelineModel = preprocess_pipeline.fit(df_train)
 
+    // -- until this point we don't need to rebuild model again.
+
+    // Get Feature Vector from Training Data
     val df_featuresvector = preprocess_model.transform(df_train)
     df_featuresvector.show
 
@@ -133,6 +148,9 @@ object Preprocess {
     // Now we can optionally save the fitted pipeline to disk
 //    preprocess_model.write.overwrite().save(output +"_preprocess_model")
 
+    val model_path = output + "_preprocess_model_alpha"
+    preprocess_model.save(model_path)
+    println(model_path)
     sc.parallelize(Seq(preprocess_model), 1).saveAsObjectFile(output +"_preprocess_model")
 
     // We can also save this unfit pipeline to disk
@@ -144,8 +162,11 @@ object Preprocess {
     //val sameModel = PipelineModel.load("/tmp/spark-logistic-regression-model")
 
 
-    labelfeatures.write.option("header","false")
-      .mode(SaveMode.Overwrite).format("parquet").save(output + "_labelfeatures.parquet")
+    labelfeatures.write
+      .option("header","true")
+      .mode(SaveMode.Overwrite)
+      .format("parquet")
+      .save(output + "_labelfeatures.parquet")
 
     sc.stop()
 
