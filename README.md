@@ -10,3 +10,31 @@ There are three executions phases:
 ./spark-submit --class "Evaluation" ml_2.11-0.1.jar  result_predicts.parquet/
 
 
+To compile xgboost (latest version 0.72) , please follow these steps:
+
+
+source: 
+
+https://docs.databricks.com/user-guide/faq/xgboost.html
+
+https://xgboost.readthedocs.io/en/latest/jvm/index.html
+
+sudo apt-get update
+
+sudo apt-get install -y maven
+
+sudo apt-get install -y cmake
+
+// You can skip this step if you have already install java 8
+
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+
+git clone --recursive https://github.com/dmlc/xgboost
+
+cd xgboost/jvm-packages
+
+mvn -DskipTests=true -Dspark.version=2.2.1 package
+
+
+
+
