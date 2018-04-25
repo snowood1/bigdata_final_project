@@ -1,14 +1,3 @@
-//import sys.process._
-//import org.apache.spark.graphx._
-//import java.io._
-
-//import scala.io.Source
-//import org.apache.spark.sql.functions._
-//import org.apache.spark.sql.types._
-//import org.apache.spark.sql.DataFrame
-//import org.apache.spark._
-//import org.apache.spark.sql.DataFrame
-
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.functions._
 import scala.collection.mutable.ArrayBuffer
@@ -34,13 +23,11 @@ object Preprocess {
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
-    //    import spark.sqlContext.implicits._
-
     val filePath = input
     val trainData = spark.read.option("header","true").option("inferSchema","true").csv(filePath)
     trainData.printSchema
 
-    val Array(train, test) = trainData.randomSplit(Array(0.7, 0.3), seed = 0)
+    val Array(train, test) = trainData.randomSplit(Array(0.9, 0.1), seed = 0)
 
     // Split test data and save to disk
     test
@@ -48,7 +35,6 @@ object Preprocess {
       .option("header","true")
       .mode(SaveMode.Overwrite)
       .csv(output + "_test")
-
 
     val df1 = train//.withColumn("minute", minute(col("click_time")))
       .withColumn("hour",hour(col("click_time")))
@@ -63,9 +49,8 @@ object Preprocess {
       .join(df1.groupBy("ip", "hour", "app").agg(count("*") as "ip_h_app"), Seq("ip", "hour", "app"))
       .join(df1.groupBy("ip", "hour", "os").agg(count("*") as "ip_h_os"), Seq("ip", "hour", "os"))
       .join(df1.groupBy("ip", "day", "hour").agg(count("*") as "ip_day_h"), Seq("ip", "day", "hour"))
-      .join(df1.groupBy("ip", "os", "device").agg(count("*") as "User_count"), Seq("ip", "os", "device"))
+      .join(df1.groupBy("ip", "os", "device").agg(count("*") as "ip_os_dev"), Seq("ip", "os", "device"))
       .join(df1.groupBy("ip", "day", "hour", "app").agg(count("*") as "nipApp"), Seq("ip", "day", "hour", "app"))
-      //      .join(df1.groupBy("ip", "day", "hour", "app", "os").agg(count("*") as "nipAppOs"), Seq("ip", "day", "hour", "app", "os"))
       .join(df1.groupBy("app", "day", "hour", "device").agg(count("*") as "app_day_h_dev"), Seq("app", "day", "hour", "device"))
     trainDF.show
 
@@ -80,11 +65,12 @@ object Preprocess {
     var stages = new ArrayBuffer[org.apache.spark.ml.PipelineStage]()
 
     for (categoricalCol <- categoricalColumns) {
-
+      
       val stringIndexer = new StringIndexer()
         .setInputCol(categoricalCol)
         .setOutputCol(categoricalCol+"_Index")
         .setHandleInvalid("keep")  //   options are "keep", "error" or "skip"
+      
       //   Category Indexing with StringIndexer
       val encoder = new OneHotEncoder()
         .setInputCol(categoricalCol+"_Index")
@@ -112,8 +98,7 @@ object Preprocess {
 
     val labelfeatures = df_featuresvector.select("label", "features")
     labelfeatures.show
-
-
+    
     // Save pipeline and pipeline model
     preprocess_model.write
       .overwrite()
