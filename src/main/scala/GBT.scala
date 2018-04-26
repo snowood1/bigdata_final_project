@@ -17,7 +17,7 @@ object GBT {
   def main(args:Array[String]) : Unit = {
 
     if (args.length != 3) {
-      println("dude, i need three parameters")
+      println("dude, i need 4 parameters")
     }
 
     val train_data = args(0)
@@ -25,17 +25,13 @@ object GBT {
     val test_data = args(2)
     val output = args(3)
 
-
     val spark = SparkSession
       .builder()
-      .appName("RF")
+      .appName("GBT")
       .getOrCreate()
 
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
-
-    //    import spark.sqlContext.implicits._
-
 
     /**
       * Step 1: Load Transformed Training Data
@@ -103,10 +99,5 @@ object GBT {
     predictions.printSchema()
 
   }
-
-
-
-
-
 
 }
