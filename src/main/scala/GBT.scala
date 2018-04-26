@@ -89,15 +89,15 @@ object GBT {
 
     predictions.show(10)
 
-    test_features_df.write
+    test_features_df.repartition(50).write
       .mode(SaveMode.Overwrite)
       .save(output + "_tests.parquet")
 
-    predictions.write
+    predictions.repartition(50).write
       .mode(SaveMode.Overwrite)
       .save(output + "_predicts.parquet")
 
-    test_features_df.printSchema()
+    test_features_df.repartition(50).printSchema()
     predictions.printSchema()
 
   }
