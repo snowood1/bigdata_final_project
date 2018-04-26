@@ -27,7 +27,7 @@ object LR {
     val spark = SparkSession
       .builder()
       .appName("LR")
-      .master("local")
+      //.master("local")
       .getOrCreate()
 
     val sc = spark.sparkContext
