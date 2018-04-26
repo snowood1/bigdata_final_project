@@ -16,7 +16,7 @@ object GBT {
 
   def main(args:Array[String]) : Unit = {
 
-    if (args.length != 3) {
+    if (args.length != 4) {
       println("dude, i need 4 parameters")
     }
 
@@ -24,6 +24,7 @@ object GBT {
     val model_path = args(1)
     val test_data = args(2)
     val output = args(3)
+
 
     val spark = SparkSession
       .builder()

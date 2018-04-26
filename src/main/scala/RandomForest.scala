@@ -1,23 +1,13 @@
 
-import org.apache.spark.ml.classification.DecisionTreeClassifier
-import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
-import org.apache.spark.sql.{SaveMode, SparkSession}
-import org.apache.spark.sql.functions._
-
-import scala.collection.mutable.ArrayBuffer
-import org.apache.spark.ml.feature.{OneHotEncoder, StringIndexer}
-import org.apache.spark.ml.feature.VectorAssembler
-import org.apache.spark.ml.{Pipeline, PipelineModel}
-import java.util.Calendar
-
-import org.apache.log4j.{Level, Logger}
-import ml.dmlc.xgboost4j.scala.spark.{XGBoost, XGBoostEstimator}
-import org.apache.spark.ml.feature._
+import ml.dmlc.xgboost4j.scala.spark.XGBoostEstimator
+import org.apache.spark.ml.PipelineModel
+import org.apache.spark.ml.classification.RandomForestClassifier
+import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.tuning.{ParamGridBuilder, TrainValidationSplit}
-import org.apache.spark.sql._
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{SaveMode, SparkSession}
 
-object XGBoostML {
+object RandomForest {
 
   /**
     *
@@ -39,7 +29,7 @@ object XGBoostML {
 
     val spark = SparkSession
       .builder()
-      .appName("XGB")
+      .appName("RF")
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -79,50 +69,26 @@ object XGBoostML {
       .join(df1.groupBy("ip", "day", "hour", "app").agg(count("*") as "nipApp"), Seq("ip", "day", "hour", "app"))
       //      .join(df1.groupBy("ip", "day", "hour", "app", "os").agg(count("*") as "nipAppOs"), Seq("ip", "day", "hour", "app", "os"))
       .join(df1.groupBy("app", "day", "hour", "device").agg(count("*") as "app_day_h_dev"), Seq("app", "day", "hour", "device"))
+      .repartition(500)
     test_df.show(10)
 
     val test_features_df = trained_model.transform(test_df).select("label", "features")
 
-    // number of iterations
-    val numRound = 10
-    val numWorkers = 4
-    // training parameters
-    val paramMap = List(
-      "eta" -> 0.1,
-      "max_depth" -> 6,
-      "min_child_weight" -> 3.0,
-      "subsample" -> 0.8,
-      "colsample_bytree" -> 0.82,
-      "colsample_bylevel" -> 0.9,
-      "base_score" -> 0.005,
-      "eval_metric" -> "auc",
-      "seed" -> 49,
-      "silent" -> 1,
-      "objective" -> "binary:logistic").toMap
-    println("Starting Xgboost ")
+    val rf = new RandomForestClassifier()
+      .setLabelCol("label")
+      .setFeaturesCol("features")
 
-
-    val xgbEstimator = new XGBoostEstimator(paramMap).setFeaturesCol("features").
-      setLabelCol("label")
     val paramGrid = new ParamGridBuilder()
-      .addGrid(xgbEstimator.round, Array(20, 50))
-      .addGrid(xgbEstimator.eta, Array(0.1, 0.4))
+      .addGrid(rf.numTrees, Array(10, 30, 100))
       .build()
     val tv = new TrainValidationSplit()
-      .setEstimator(xgbEstimator)
+      .setEstimator(rf)
       .setEvaluator(new BinaryClassificationEvaluator().setLabelCol("label").setRawPredictionCol("prediction"))
       .setEstimatorParamMaps(paramGrid)
       .setTrainRatio(0.8)  // Use 3+ in practice
-    val xgBoostModelWithDF = tv.fit(train_features_df)
+    val rfModelWithDF = tv.fit(train_features_df)
 
-//    val xgBoostModelWithDF = XGBoost.trainWithDataFrame(
-//      train_features_df,
-//      paramMap,
-//      round = numRound,
-//      nWorkers = numWorkers,
-//      useExternalMemory = true)
-
-    val predictions = xgBoostModelWithDF.transform(test_features_df)
+    val predictions = rfModelWithDF.transform(test_features_df)
 
     predictions.show(10)
 
