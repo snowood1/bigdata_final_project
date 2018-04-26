@@ -66,7 +66,6 @@ object RandomForest {
       .join(df1.groupBy("ip", "day", "hour").agg(count("*") as "ip_day_h"), Seq("ip", "day", "hour"))
       .join(df1.groupBy("ip", "os", "device").agg(count("*") as "ip_os_dev"), Seq("ip", "os", "device"))
       .join(df1.groupBy("ip", "day", "hour", "app").agg(count("*") as "nipApp"), Seq("ip", "day", "hour", "app"))
-      //      .join(df1.groupBy("ip", "day", "hour", "app", "os").agg(count("*") as "nipAppOs"), Seq("ip", "day", "hour", "app", "os"))
       .join(df1.groupBy("app", "day", "hour", "device").agg(count("*") as "app_day_h_dev"), Seq("app", "day", "hour", "device"))
       .repartition(500)
     test_df.show(10)
