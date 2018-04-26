@@ -41,7 +41,7 @@ object NB {
       .parquet(train_data).repartition(500)
 
     train_features_df.cache()
-    
+
     val trained_model = PipelineModel.load(model_path)
 
     val df1 = spark.read
@@ -69,7 +69,9 @@ object NB {
 
     val nb = new NaiveBayes()
 
-    val paramGrid = new ParamGridBuilder().build()
+    val paramGrid = new ParamGridBuilder()
+      .addGrid(nb.smoothing, Array(0.0,0.5,1))
+      .build()
 
     val tv = new TrainValidationSplit()
       .setEstimator(nb)
@@ -92,7 +94,6 @@ object NB {
 
     test_features_df.repartition(50).printSchema()
     predictions.printSchema()
-    
+
   }
 }
-
