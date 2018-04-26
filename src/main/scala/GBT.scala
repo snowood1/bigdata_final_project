@@ -39,6 +39,7 @@ object GBT {
     val train_features_df = spark.read
       .option("header","true")
       .parquet(train_data)
+      .repartition(500)
 
     train_features_df.cache()
 
@@ -63,6 +64,7 @@ object GBT {
       .join(df1.groupBy("ip", "day", "hour", "app").agg(count("*") as "nipApp"), Seq("ip", "day", "hour", "app"))
       //      .join(df1.groupBy("ip", "day", "hour", "app", "os").agg(count("*") as "nipAppOs"), Seq("ip", "day", "hour", "app", "os"))
       .join(df1.groupBy("app", "day", "hour", "device").agg(count("*") as "app_day_h_dev"), Seq("app", "day", "hour", "device"))
+      .repartition(500)
     test_df.show(10)
 
     val test_features_df = trained_model.transform(test_df).select("label", "features")
@@ -73,7 +75,7 @@ object GBT {
       .setMaxIter(10)
 
     val paramGrid = new ParamGridBuilder()
-      .addGrid(gbt.maxIter, Array(10, 50, 100))
+      .addGrid(gbt.maxIter, Array(10, 30))
       .addGrid(gbt.maxDepth, Array(2,5))
       .build()
     val tv = new TrainValidationSplit()
