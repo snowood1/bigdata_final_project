@@ -1,5 +1,4 @@
 import org.apache.spark.ml.PipelineModel
-import org.apache.spark.ml.classification.{GBTClassifier, RandomForestClassifier}
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.tuning.{ParamGridBuilder, TrainValidationSplit}
 import org.apache.spark.sql.functions._
@@ -28,7 +27,7 @@ object NB {
     val spark = SparkSession
       .builder()
       .appName("NB")
-//      .master("local")
+      .master("local")
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -42,8 +41,7 @@ object NB {
       .parquet(train_data).repartition(500)
 
     train_features_df.cache()
-
-
+    
     val trained_model = PipelineModel.load(model_path)
 
     val df1 = spark.read
@@ -62,7 +60,6 @@ object NB {
       .join(df1.groupBy("ip", "day", "hour").agg(count("*") as "ip_day_h"), Seq("ip", "day", "hour"))
       .join(df1.groupBy("ip", "os", "device").agg(count("*") as "ip_os_dev"), Seq("ip", "os", "device"))
       .join(df1.groupBy("ip", "day", "hour", "app").agg(count("*") as "nipApp"), Seq("ip", "day", "hour", "app"))
-      //      .join(df1.groupBy("ip", "day", "hour", "app", "os").agg(count("*") as "nipAppOs"), Seq("ip", "day", "hour", "app", "os"))
       .join(df1.groupBy("app", "day", "hour", "device").agg(count("*") as "app_day_h_dev"), Seq("app", "day", "hour", "device"))
     test_df.show(10)
 
@@ -72,11 +69,7 @@ object NB {
 
     val nb = new NaiveBayes()
 
-//      .fit(train_features_df)
-
-    val paramGrid = new ParamGridBuilder()
-          .addGrid(nb.smoothing, Array(0.0,0.5,1))
-          .build()
+    val paramGrid = new ParamGridBuilder().build()
 
     val tv = new TrainValidationSplit()
       .setEstimator(nb)
@@ -99,7 +92,7 @@ object NB {
 
     test_features_df.repartition(50).printSchema()
     predictions.printSchema()
-
+    
   }
-
 }
+
