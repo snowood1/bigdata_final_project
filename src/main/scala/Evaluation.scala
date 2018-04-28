@@ -1,6 +1,6 @@
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.param.ParamMap
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SaveMode, SparkSession}
 
 object Evaluation {
   def main(args:Array[String]) : Unit = {
@@ -17,7 +17,11 @@ object Evaluation {
       .appName("Evaluation")
       .getOrCreate()
 
+    import spark.implicits._
+
     val sc = spark.sparkContext
+
+
     sc.setLogLevel("ERROR")
 
     val test_predict_df = spark.read
@@ -34,7 +38,12 @@ object Evaluation {
     println("Evaluation: areaUnderROC " + areaTest.toString)
 
 
-    sc.parallelize(Seq(areaTest.toString)).saveAsTextFile(output + "_auroc")
+    sc.parallelize(Seq(areaTest.toString))
+      .toDF
+      .write
+      .mode(SaveMode.Overwrite)
+      .csv(output + "_auroc")
+
   }
 
 }

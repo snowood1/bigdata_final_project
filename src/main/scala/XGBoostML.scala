@@ -54,7 +54,7 @@ object XGBoostML {
     val train_features_df = spark.read
       .option("header","true")
       .parquet(train_data)
-      .repartition(500)
+      .repartition(4)
 
     train_features_df.cache()
 
@@ -88,6 +88,7 @@ object XGBoostML {
     val numWorkers = 4
     // training parameters
     val paramMap = List(
+      "nWorkers" -> 2,
       "eta" -> 0.1,
       "max_depth" -> 6,
       "min_child_weight" -> 3.0,
