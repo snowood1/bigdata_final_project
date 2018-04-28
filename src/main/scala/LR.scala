@@ -1,11 +1,11 @@
 import org.apache.spark.ml.PipelineModel
+import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.tuning.{ParamGridBuilder, TrainValidationSplit}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SaveMode, SparkSession}
-import org.apache.spark.ml.classification.NaiveBayes
 
-object NB {
+object LR {
 
   /**
     *
@@ -26,8 +26,8 @@ object NB {
 
     val spark = SparkSession
       .builder()
-      .appName("NB")
-      .master("local")
+      .appName("LR")
+      //.master("local")
       .getOrCreate()
 
     val sc = spark.sparkContext
@@ -38,9 +38,11 @@ object NB {
       */
     val train_features_df = spark.read
       .option("header","true")
-      .parquet(train_data).repartition(500)
+      .parquet(train_data)
+      .repartition(500)
 
     train_features_df.cache()
+
 
     val trained_model = PipelineModel.load(model_path)
 
@@ -61,24 +63,29 @@ object NB {
       .join(df1.groupBy("ip", "os", "device").agg(count("*") as "ip_os_dev"), Seq("ip", "os", "device"))
       .join(df1.groupBy("ip", "day", "hour", "app").agg(count("*") as "nipApp"), Seq("ip", "day", "hour", "app"))
       .join(df1.groupBy("app", "day", "hour", "device").agg(count("*") as "app_day_h_dev"), Seq("app", "day", "hour", "device"))
+      .repartition(500)
     test_df.show(10)
 
-    val test_df_new = test_df.repartition(500)
+    val test_features_df = trained_model.transform(test_df).select("label", "features")
 
-    val test_features_df = trained_model.transform(test_df_new).select("label", "features")
-
-    val nb = new NaiveBayes()
+    val lr = new LogisticRegression()
+      .setMaxIter(10)
+//      .setRegParam(0.3)
+//      .setElasticNetParam(0.8)
 
     val paramGrid = new ParamGridBuilder()
-      .addGrid(nb.smoothing, Array(0.0,0.5,1))
+      .addGrid(lr.regParam, Array(0.1, 0.01))
+      .addGrid(lr.elasticNetParam , Array(0, 0.8))
       .build()
 
     val tv = new TrainValidationSplit()
-      .setEstimator(nb)
+      .setEstimator(lr)
       .setEvaluator(new BinaryClassificationEvaluator().setLabelCol("label").setRawPredictionCol("prediction"))
       .setEstimatorParamMaps(paramGrid)
       .setTrainRatio(0.8)  // Use 3+ in practice
+
     val rfModelWithDF = tv.fit(train_features_df)
+//    val rfModelWithDF = gbt.fit(train_features_df)
 
     val predictions = rfModelWithDF.transform(test_features_df)
 
@@ -96,4 +103,5 @@ object NB {
     predictions.printSchema()
 
   }
+
 }
